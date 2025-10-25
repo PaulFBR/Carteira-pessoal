@@ -1067,14 +1067,34 @@ body {
     margin: 10px;
   }
 
-  .header-content {
-    flex-direction: column;
-    text-align: center;
+  .header-content-new {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .month-selector-left {
+    justify-self: center;
+    order: 2;
+  }
+
+  .header-title-center {
+    order: 1;
+  }
+
+  .header-title-center h1 {
+    font-size: 1.5rem;
   }
 
   .user-menu {
-    flex-direction: column;
-    gap: 10px;
+    justify-self: center;
+    order: 3;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .user-email {
+    display: none;
   }
 }
 
@@ -1088,18 +1108,41 @@ body {
     font-size: 2rem;
   }
 
+  .summary-cards {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .card {
+    padding: 20px;
+  }
+
+  .card .value {
+    font-size: 1.5rem;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }
 
   .tabs {
-    flex-direction: column;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    font-size: 0.85rem;
+    padding: 12px 8px;
+  }
+
+  .tab-content {
+    padding: 20px 15px;
   }
 
   .item {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
+    padding: 12px;
   }
 
   .item-actions {
@@ -1136,7 +1179,6 @@ body {
     font-size: 0.7rem;
   }
 
-  /* Responsividade para seletor de período por ano */
   .year-period-selector {
     flex-direction: column;
     gap: 15px;
@@ -1150,11 +1192,147 @@ body {
   .year-period-selector select {
     width: 100%;
   }
+
+  .calendar-toggle-btn {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
 }
 
+/* Adicionando responsividade específica para iPhone e telas pequenas */
 @media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+
+  .container {
+    padding: 5px;
+  }
+
+  .header-content-new {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .header-title-center h1 {
+    font-size: 1.2rem;
+  }
+
+  .calendar-toggle-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .avatar {
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
+  }
+
+  .btn-logout {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .summary-cards {
+    gap: 10px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .card h3 {
+    font-size: 0.9rem;
+  }
+
+  .card .value {
+    font-size: 1.3rem;
+  }
+
+  .tabs {
+    flex-direction: column;
+  }
+
+  .tab {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .tab-content {
+    padding: 15px 10px;
+  }
+
+  .tab-content h2 {
+    font-size: 1.3rem;
+  }
+
+  .form-group label {
+    font-size: 0.9rem;
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+
+  .item {
+    padding: 10px;
+  }
+
+  .item-name {
+    font-size: 0.9rem;
+  }
+
+  .item-value {
+    font-size: 1rem;
+  }
+
+  .btn-small {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+
+  .credit-card-item {
+    padding: 15px;
+  }
+
+  .card-name {
+    font-size: 1rem;
+  }
+
+  .card-total {
+    font-size: 1.2rem;
+  }
+
+  .bank-logo {
+    width: 40px;
+    height: 40px;
+    font-size: 0.7rem;
+  }
+
   .month-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .month-item {
+    padding: 10px 6px;
+  }
+
+  .month-name {
+    font-size: 0.8rem;
+  }
+
+  .month-year {
+    font-size: 0.65rem;
   }
 }
 
@@ -1168,6 +1346,10 @@ body {
 
   .modal-header {
     padding: 20px;
+  }
+
+  .modal-header h2 {
+    font-size: 1.3rem;
   }
 
   .modal-body {
@@ -1186,10 +1368,144 @@ body {
 }
 
 @media (max-width: 480px) {
+  .modal-content {
+    width: 98%;
+    margin: 5% auto;
+    max-height: 90vh;
+  }
+
+  .modal-header {
+    padding: 15px;
+  }
+
+  .modal-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .modal-body {
+    padding: 15px;
+  }
+
   .profile-avatar-large {
     width: 50px;
     height: 50px;
     font-size: 1.3rem;
+  }
+
+  .profile-section h3 {
+    font-size: 1.1rem;
+  }
+
+  .profile-section p {
+    font-size: 0.85rem;
+  }
+}
+
+/* Responsividade para seletor de calendário */
+@media (max-width: 768px) {
+  .calendar-modal-content {
+    width: 95%;
+    padding: 20px;
+    margin: 10% auto;
+  }
+
+  .calendar-header h3 {
+    font-size: 1.5rem;
+  }
+
+  .year-nav-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .months-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .month-card {
+    padding: 15px;
+  }
+
+  .month-card-name {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .calendar-modal-content {
+    width: 98%;
+    padding: 15px;
+    margin: 5% auto;
+  }
+
+  .calendar-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+  }
+
+  .calendar-header h3 {
+    font-size: 1.2rem;
+  }
+
+  .year-nav-btn {
+    width: 35px;
+    height: 35px;
+    font-size: 0.9rem;
+  }
+
+  .months-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .month-card {
+    padding: 12px;
+  }
+
+  .month-card-name {
+    font-size: 0.9rem;
+  }
+
+  .month-card-number {
+    font-size: 0.75rem;
+  }
+}
+
+/* Garantindo que nada saia da tela em mobile */
+@media (max-width: 768px) {
+  * {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  .container {
+    overflow-x: hidden;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+/* Melhorando usabilidade de botões em mobile */
+@media (max-width: 768px) {
+  .btn,
+  .tab,
+  .auth-btn,
+  .profile-tab,
+  .month-card,
+  .calendar-toggle-btn {
+    min-height: 44px;
+    touch-action: manipulation;
   }
 }
 
