@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carteira Pessoal</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Adicionando Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <!-- Adicionando script de debug no console -->
+    <script>
+        console.log("[v0] ========================================")
+        console.log("[v0] 🚀 APLICAÇÃO INICIANDO")
+        console.log("[v0] ========================================")
+        console.log("[v0] Navegador:", navigator.userAgent)
+        console.log("[v0] Data/Hora:", new Date().toLocaleString())
+        
+        window.addEventListener('error', function(e) {
+            console.error("[v0] ❌ ERRO GLOBAL:", e.message)
+            console.error("[v0] ❌ Arquivo:", e.filename)
+            console.error("[v0] ❌ Linha:", e.lineno)
+            console.error("[v0] ❌ Coluna:", e.colno)
+            console.error("[v0] ❌ Stack:", e.error?.stack)
+        })
+    </script>
+</head>
+<body>
+    <!-- Adicionando tela de autenticação -->
+    <div id="authContainer" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>💰 Carteira Pessoal</h1>
+                <p>Faça login para acessar suas finanças</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="showAuthTab('login')">Entrar</button>
+                <button class="auth-tab" onclick="showAuthTab('register')">Cadastrar</button>
+            </div>
+
+            <div id="loginTab" class="auth-tab-content active">
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="seu@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Senha</label>
+                        <input type="password" id="loginPassword" placeholder="Sua senha" required>
+                    </div>
+                    <button type="submit" class="btn auth-btn">Entrar</button>
+                </form>
+                <p class="auth-link">
+                    <a href="#" onclick="showForgotPassword()">Esqueceu a senha?</a>
+                </p>
+            </div>
+
+            <div id="registerTab" class="auth-tab-content">
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="registerName">Nome</label>
+                        <input type="text" id="registerName" placeholder="Seu nome completo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" placeholder="seu@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Senha</label>
+                        <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirmar Senha</label>
+                        <input type="password" id="confirmPassword" placeholder="Confirme sua senha" required>
+                    </div>
+                    <button type="submit" class="btn auth-btn">Cadastrar</button>
+                </form>
+            </div>
+
+            <div id="forgotPasswordTab" class="auth-tab-content">
+                <form id="forgotPasswordForm">
+                    <div class="form-group">
+                        <label for="resetEmail">Email</label>
+                        <input type="email" id="resetEmail" placeholder="seu@email.com" required>
+                    </div>
+                    <button type="submit" class="btn auth-btn">Enviar Link de Recuperação</button>
+                </form>
+                <p class="auth-link">
+                    <a href="#" onclick="showAuthTab('login')">Voltar ao login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container principal da aplicação (oculto inicialmente) -->
+    <div id="appContainer" class="container" style="display: none;">
+        <div class="header">
+            <div class="header-content-new">
+                <!-- Seletor de mês/ano à esquerda -->
+                <div class="month-selector-left">
+                    <button class="calendar-toggle-btn" onclick="toggleCalendarSelector()">
+                        📅 <span id="currentMonthDisplay">Selecionar Mês</span>
+                    </button>
+                </div>
+
+                <!-- Título centralizado -->
+                <div class="header-title-center">
+                    <h1>💰 Carteira Pessoal</h1>
+                </div>
+
+                <!-- Menu do usuário à direita -->
+                <div class="user-menu">
+                    <div class="profile-icon" onclick="showProfile()">
+                        <div class="avatar">
+                            <span id="userInitials">U</span>
+                        </div>
+                    </div>
+                    <span id="userEmail" class="user-email"></span>
+                    <button class="btn-logout" onclick="authManager.logout()">Sair</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal do seletor de calendário -->
+        <div id="calendarSelectorModal" class="calendar-modal">
+            <div class="calendar-modal-content">
+                <div class="calendar-header">
+                    <button class="year-nav-btn" onclick="changeYear(-1)">◀</button>
+                    <h3 id="calendarYear">2025</h3>
+                    <button class="year-nav-btn" onclick="changeYear(1)">▶</button>
+                </div>
+                <div class="months-grid" id="monthsGrid">
+                    <!-- Meses serão gerados dinamicamente -->
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-cards">
+            <div class="card income">
+                <h3>Entradas Totais</h3>
+                <div class="value" id="totalIncome">R$ 0,00</div>
+            </div>
+            <div class="card expense">
+                <h3>Saídas Totais</h3>
+                <div class="value" id="totalExpense">R$ 0,00</div>
+            </div>
+            <div class="card balance">
+                <h3>Saldo</h3>
+                <div class="value" id="balance">R$ 0,00</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <!-- Corrigindo onclick para passar event -->
+            <button class="tab active" onclick="showTab(event, 'fixed')">Entradas/Saídas Fixas</button>
+            <button class="tab" onclick="showTab(event, 'variable')">Gastos Variáveis</button>
+            <button class="tab" onclick="showTab(event, 'credit-card')">Cartões de Crédito</button>
+            <button class="tab" onclick="showTab(event, 'graphics')">Gráficos</button>
+        </div>
+
+        <div id="fixed" class="tab-content active">
+            <h2>Entradas e Saídas Fixas</h2>
+            <p style="margin-bottom: 20px; color: #666;">Adicione suas receitas e despesas que se repetem todo mês.</p>
+            
+            <form id="fixedForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fixedName">Nome</label>
+                        <input type="text" id="fixedName" placeholder="Ex: Salário, Aluguel..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="fixedValue">Valor (R$)</label>
+                        <input type="number" id="fixedValue" step="0.01" placeholder="0,00" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fixedType">Tipo</label>
+                        <select id="fixedType" required>
+                            <option value="">Selecione...</option>
+                            <option value="income">Entrada</option>
+                            <option value="expense">Saída</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fixedCategory">Categoria</label>
+                        <select id="fixedCategory" required>
+                            <option value="">Selecione...</option>
+                            <option value="salario">Salário</option>
+                            <option value="freelance">Freelance</option>
+                            <option value="aluguel">Aluguel</option>
+                            <option value="financiamento">Financiamento</option>
+                            <option value="contas">Contas Básicas</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Adicionar Item Fixo</button>
+            </form>
+
+            <div class="items-list">
+                <h3>Itens Fixos</h3>
+                <div id="fixedItems"></div>
+            </div>
+        </div>
+
+        <div id="variable" class="tab-content">
+            <h2>Gastos Variáveis</h2>
+            <p style="margin-bottom: 20px; color: #666;">Registre seus gastos do dia a dia que variam mensalmente.</p>
+            
+            <form id="variableForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="variableName">Descrição</label>
+                        <input type="text" id="variableName" placeholder="Ex: Supermercado, Combustível..." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="variableValue">Valor (R$)</label>
+                        <input type="number" id="variableValue" step="0.01" placeholder="0,00" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="variableCategory">Categoria</label>
+                        <select id="variableCategory" required>
+                            <option value="">Selecione...</option>
+                            <option value="alimentacao">Alimentação</option>
+                            <option value="transporte">Transporte</option>
+                            <option value="saude">Saúde</option>
+                            <option value="lazer">Lazer</option>
+                            <option value="roupas">Roupas</option>
+                            <option value="casa">Casa</option>
+                            <option value="educacao">Educação</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="variableDate">Data</label>
+                        <input type="date" id="variableDate" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Adicionar Gasto</button>
+            </form>
+
+            <div class="items-list">
+                <h3>Gastos do Mês</h3>
+                <div id="variableItems"></div>
+            </div>
+        </div>
+
+        <div id="credit-card" class="tab-content">
+            <h2>Cartões de Crédito</h2>
+            <p style="margin-bottom: 20px; color: #666;">Gerencie múltiplos cartões de crédito e importe faturas via CSV.</p>
+            
+            <div class="card-management-section">
+                <h3>Adicionar Novo Cartão</h3>
+                <form id="addCardForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cardBank">Banco</label>
+                            <select id="cardBank" required>
+                                <option value="">Selecione o banco...</option>
+                                <option value="nubank">Nubank</option>
+                                <option value="itau">Itaú</option>
+                                <option value="bradesco">Bradesco</option>
+                                <option value="santander">Santander</option>
+                                <option value="bb">Banco do Brasil</option>
+                                <option value="caixa">Caixa Econômica</option>
+                                <option value="inter">Inter</option>
+                                <option value="c6">C6 Bank</option>
+                                <option value="neon">Neon</option>
+                                <option value="pagbank">PagBank</option>
+                                <option value="picpay">PicPay</option>
+                                <option value="btg">BTG Pactual</option>
+                                <option value="next">Next</option>
+                                <option value="will">Will Bank</option>
+                                <option value="mercadopago">Mercado Pago</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cardName">Nome do Cartão</label>
+                            <input type="text" id="cardName" placeholder="Ex: Cartão Principal, Cartão Reserva..." required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Adicionar Cartão</button>
+                </form>
+            </div>
+
+            <hr style="margin: 30px 0; border: 1px solid #e1e8ed;">
+
+            <div id="cardsList"></div>
+
+            <div id="selectedCardOperations" style="display: none;">
+                <h3>Operações do Cartão</h3>
+                
+                <div class="csv-upload-section">
+                    <h4>Importar Fatura CSV</h4>
+                    <p style="color: #666; margin-bottom: 15px;">
+                        Formato esperado: data (AAAA-MM-DD), titulo, valor (xxxx.xx)
+                    </p>
+                    <div class="form-group">
+                        <label for="csvFile">Selecionar arquivo CSV</label>
+                        <input type="file" id="csvFile" accept=".csv" class="file-input">
+                    </div>
+                    <button type="button" class="btn" onclick="financeManager.importCSV()">Importar CSV</button>
+                </div>
+
+                <hr style="margin: 20px 0; border: 1px solid #e1e8ed;">
+
+                <form id="creditCardForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="creditCardName">Descrição</label>
+                            <input type="text" id="creditCardName" placeholder="Ex: Compra no supermercado..." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="creditCardValue">Valor (R$)</label>
+                            <input type="number" id="creditCardValue" step="0.01" placeholder="0,00" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="creditCardCategory">Categoria</label>
+                            <select id="creditCardCategory" required>
+                                <option value="">Selecione...</option>
+                                <option value="alimentacao">Alimentação</option>
+                                <option value="transporte">Transporte</option>
+                                <option value="saude">Saúde</option>
+                                <option value="lazer">Lazer</option>
+                                <option value="roupas">Roupas</option>
+                                <option value="casa">Casa</option>
+                                <option value="educacao">Educação</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="creditCardDate">Data</label>
+                            <input type="date" id="creditCardDate" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Adicionar Gasto no Cartão</button>
+                </form>
+
+                <div class="items-list">
+                    <h4>Gastos do Cartão Selecionado</h4>
+                    <div id="creditCardItems"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="graphics" class="tab-content">
+            <h2>Gráficos e Análises</h2>
+            <p style="margin-bottom: 20px; color: #666;">Visualize suas finanças através de gráficos interativos.</p>
+            
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3>Gastos por Categoria</h3>
+                    <canvas id="categoryChart" width="400" height="300"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>Evolução Mensal</h3>
+                    <canvas id="monthlyChart" width="400" height="300"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>Distribuição de Gastos</h3>
+                    <canvas id="expenseDistributionChart" width="400" height="300"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <h3>Comparativo Cartões</h3>
+                    <canvas id="cardsComparisonChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adicionando modal de perfil -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>👤 Meu Perfil</h2>
+                <span class="close" onclick="closeProfile()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="profile-section">
+                    <div class="profile-avatar-large">
+                        <span id="profileInitials">U</span>
+                    </div>
+                    <h3 id="profileName">Nome do Usuário</h3>
+                    <p id="profileEmail">email@exemplo.com</p>
+                </div>
+
+                <div class="profile-tabs">
+                    <button class="profile-tab active" onclick="showProfileTab('info')">Informações</button>
+                    <button class="profile-tab" onclick="showProfileTab('security')">Segurança</button>
+                </div>
+
+                <div id="profileInfoTab" class="profile-tab-content active">
+                    <form id="updateProfileForm">
+                        <div class="form-group">
+                            <label for="updateName">Nome Completo</label>
+                            <input type="text" id="updateName" placeholder="Seu nome completo" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="updateEmail">Email</label>
+                            <input type="email" id="updateEmail" placeholder="seu@email.com" disabled>
+                            <small>O email não pode ser alterado</small>
+                        </div>
+                        <button type="submit" class="btn">Atualizar Informações</button>
+                    </form>
+                </div>
+
+                <div id="profileSecurityTab" class="profile-tab-content">
+                    <form id="changePasswordForm">
+                        <div class="form-group">
+                            <label for="currentPassword">Senha Atual</label>
+                            <input type="password" id="currentPassword" placeholder="Sua senha atual" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">Nova Senha</label>
+                            <input type="password" id="newPassword" placeholder="Mínimo 6 caracteres" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmNewPassword">Confirmar Nova Senha</label>
+                            <input type="password" id="confirmNewPassword" placeholder="Confirme a nova senha" required>
+                        </div>
+                        <button type="submit" class="btn">Alterar Senha</button>
+                    </form>
+
+                    <hr style="margin: 30px 0;">
+
+                    <div class="danger-zone">
+                        <h4>Zona de Perigo</h4>
+                        <p>Ações irreversíveis que afetam sua conta</p>
+                        <button type="button" class="btn btn-danger" onclick="deleteAccount()">Excluir Conta</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adicionando loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p>Carregando...</p>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+    <script src="auth.js"></script>
+</body>
+</html>
