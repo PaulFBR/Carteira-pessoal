@@ -163,9 +163,19 @@ class FinanceManager {
     }
 
     return this.data.fixedItems.filter((item) => {
-      if (!item.deletedMonth) return true
-      if (!this.currentMonth) return true
-      return item.deletedMonth > this.currentMonth
+      // Se o item tem mês de início, só mostrar se o mês atual for >= mês de início
+      if (item.startMonth && this.currentMonth) {
+        if (item.startMonth > this.currentMonth) {
+          return false // Item ainda não começou neste mês
+        }
+      }
+
+      // Se o item foi deletado, só mostrar se o mês atual for < mês de exclusão
+      if (item.deletedMonth && this.currentMonth) {
+        return item.deletedMonth > this.currentMonth
+      }
+
+      return true
     })
   }
 
@@ -174,6 +184,11 @@ class FinanceManager {
 
     if (!this.currentUser) {
       alert("Você precisa estar logado")
+      return
+    }
+
+    if (!this.currentMonth) {
+      alert("Selecione um mês primeiro")
       return
     }
 
@@ -193,6 +208,7 @@ class FinanceManager {
       value,
       type,
       category,
+      startMonth: this.currentMonth, // Salvar o mês de início
     }
 
     if (!this.data.fixedItems) {
@@ -200,7 +216,7 @@ class FinanceManager {
     }
 
     this.data.fixedItems.push(item)
-    console.log("[v0] ✅ Item adicionado")
+    console.log("[v0] ✅ Item adicionado com mês de início:", this.currentMonth)
 
     this.saveData()
     this.updateDisplay()
