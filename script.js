@@ -15,7 +15,95 @@ class FinanceManager {
     this.selectedCardId = null
     this.currentUser = null
     this.data = { fixedItems: [], creditCards: [] }
+    this.encryptionKey = null
     console.log("[v0] Mês inicial:", this.currentMonth)
+  }
+
+  async generateEncryptionKey(userId) {
+    const encoder = new TextEncoder()
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(userId + "carteira-pessoal-secret-2024"),
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits", "deriveKey"],
+    )
+
+    this.encryptionKey = await crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: encoder.encode("carteira-salt"),
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"],
+    )
+
+    console.log("[v0] 🔐 Chave de criptografia gerada")
+  }
+
+  async encryptData(data) {
+    if (!this.encryptionKey) {
+      console.error("[v0] ❌ Chave de criptografia não disponível")
+      return data
+    }
+
+    try {
+      const encoder = new TextEncoder()
+      const dataString = JSON.stringify(data)
+      const dataBuffer = encoder.encode(dataString)
+
+      const iv = crypto.getRandomValues(new Uint8Array(12))
+      const encryptedBuffer = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, this.encryptionKey, dataBuffer)
+
+      const encryptedArray = new Uint8Array(encryptedBuffer)
+      const combined = new Uint8Array(iv.length + encryptedArray.length)
+      combined.set(iv)
+      combined.set(encryptedArray, iv.length)
+
+      const base64 = btoa(String.fromCharCode(...combined))
+      console.log("[v0] 🔒 Dados criptografados")
+      return { encrypted: true, data: base64 }
+    } catch (error) {
+      console.error("[v0] ❌ Erro ao criptografar:", error)
+      return data
+    }
+  }
+
+  async decryptData(encryptedData) {
+    if (!encryptedData || !encryptedData.encrypted) {
+      return encryptedData
+    }
+
+    if (!this.encryptionKey) {
+      console.error("[v0] ❌ Chave de criptografia não disponível")
+      return null
+    }
+
+    try {
+      const combined = Uint8Array.from(atob(encryptedData.data), (c) => c.charCodeAt(0))
+      const iv = combined.slice(0, 12)
+      const encryptedBuffer = combined.slice(12)
+
+      const decryptedBuffer = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: iv },
+        this.encryptionKey,
+        encryptedBuffer,
+      )
+
+      const decoder = new TextDecoder()
+      const dataString = decoder.decode(decryptedBuffer)
+      const data = JSON.parse(dataString)
+
+      console.log("[v0] 🔓 Dados descriptografados")
+      return data
+    } catch (error) {
+      console.error("[v0] ❌ Erro ao descriptografar:", error)
+      return null
+    }
   }
 
   initFirestore() {
@@ -44,6 +132,7 @@ class FinanceManager {
     }
 
     this.currentUser = userId
+    await this.generateEncryptionKey(userId)
 
     try {
       const userRef = this.firestore.collection("users").doc(userId)
@@ -57,8 +146,10 @@ class FinanceManager {
       console.log("[v0] 📅 Mês atual:", month)
 
       if (userDoc.exists) {
-        this.data = userDoc.data()
-        console.log("[v0] ✅ Dados carregados do Firebase")
+        const userData = userDoc.data()
+        this.data = (await this.decryptData(userData)) || { fixedItems: [], creditCards: [] }
+
+        console.log("[v0] ✅ Dados carregados e descriptografados do Firebase")
         console.log("[v0] Estrutura atual:", Object.keys(this.data))
 
         // Garantir que ano/mês atual existam
@@ -76,7 +167,8 @@ class FinanceManager {
         }
 
         // Salvar estrutura atualizada
-        await userRef.set(this.data, { merge: true })
+        const encryptedData = await this.encryptData(this.data)
+        await userRef.set(encryptedData, { merge: true })
         console.log("[v0] ✅ Estrutura de ano/mês garantida")
       } else {
         console.log("[v0] ⚠️ Documento não existe, criando estrutura inicial...")
@@ -92,8 +184,9 @@ class FinanceManager {
           },
         }
 
-        await userRef.set(this.data)
-        console.log("[v0] ✅ Estrutura inicial criada")
+        const encryptedData = await this.encryptData(this.data)
+        await userRef.set(encryptedData)
+        console.log("[v0] ✅ Estrutura inicial criada e criptografada")
       }
 
       console.log("[v0] 📊 Estrutura final do Firebase:")
@@ -129,8 +222,9 @@ class FinanceManager {
 
     try {
       console.log("[v0] 💾 Salvando dados...")
-      await this.firestore.collection("users").doc(this.currentUser).set(this.data, { merge: true })
-      console.log("[v0] ✅ Dados salvos")
+      const encryptedData = await this.encryptData(this.data)
+      await this.firestore.collection("users").doc(this.currentUser).set(encryptedData, { merge: true })
+      console.log("[v0] ✅ Dados criptografados e salvos")
     } catch (error) {
       console.error("[v0] ❌ Erro ao salvar:", error)
     }
